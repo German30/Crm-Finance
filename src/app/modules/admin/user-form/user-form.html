@@ -1,0 +1,238 @@
+<div class="page">
+  <nav class="crumbs" aria-label="Ruta">
+    <a routerLink="/admin/users">Usuarios</a>
+    <app-icon name="chevronRight" [size]="11" />
+    <span>{{ isEditMode() ? 'Editar' : 'Alta' }}</span>
+  </nav>
+
+  <div class="page-head">
+    <div>
+      <h1>{{ title() }}</h1>
+      <p class="lede">{{ lede() }}</p>
+    </div>
+  </div>
+
+  @if (loadError()) {
+    <section class="panel form-panel">
+      <div class="panel-body">
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo abrir el formulario</h4>
+          <p>{{ loadError() }}</p>
+          <a class="btn btn-secondary" routerLink="/admin/users">Volver al directorio</a>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <section class="panel form-panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Datos de la cuenta</h2>
+      </div>
+
+      @if (loading()) {
+        <div class="panel-body form-skeleton">
+          @for (row of [1, 2, 3, 4]; track row) {
+            <div>
+              <span class="skel" style="width: 90px; height: 9px"></span>
+              <span class="skel" style="height: 38px; margin-top: 8px; border-radius: 5px"></span>
+            </div>
+          }
+        </div>
+      } @else {
+        <form #form="ngForm" (ngSubmit)="onSubmit(form)" novalidate>
+          <div class="panel-body form-grid">
+            <div class="field span-2" [class.is-invalid]="name.invalid && name.touched">
+              <label class="field-label" for="name">
+                Nombre completo<span class="req" aria-hidden="true">*</span>
+              </label>
+              <input
+                class="input"
+                type="text"
+                id="name"
+                name="name"
+                #name="ngModel"
+                [(ngModel)]="model.name"
+                required
+                minlength="3"
+                maxlength="120"
+                autocomplete="name"
+                placeholder="Ana Lucía Herrera"
+                [attr.aria-invalid]="name.invalid && name.touched"
+              />
+              @if (name.invalid && name.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  {{ name.errors?.['required']
+                      ? 'Captura el nombre del usuario.'
+                      : 'El nombre debe tener al menos 3 caracteres.' }}
+                </p>
+              }
+            </div>
+
+            <div class="field span-2" [class.is-invalid]="email.invalid && email.touched">
+              <label class="field-label" for="email">
+                Correo corporativo<span class="req" aria-hidden="true">*</span>
+              </label>
+              <input
+                class="input"
+                type="email"
+                id="email"
+                name="email"
+                #email="ngModel"
+                [(ngModel)]="model.email"
+                required
+                email
+                autocomplete="off"
+                inputmode="email"
+                autocapitalize="off"
+                spellcheck="false"
+                placeholder="nombre@meridian.mx"
+                [attr.aria-invalid]="email.invalid && email.touched"
+              />
+              <p class="field-hint">Con este correo iniciará sesión en el panel.</p>
+              @if (email.invalid && email.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  {{ email.errors?.['required']
+                      ? 'Captura el correo del usuario.'
+                      : 'Ese correo no tiene un formato válido.' }}
+                </p>
+              }
+            </div>
+
+            @if (!isEditMode()) {
+              <div class="field span-2" [class.is-invalid]="password.invalid && password.touched">
+                <label class="field-label" for="password">
+                  Contraseña temporal<span class="req" aria-hidden="true">*</span>
+                </label>
+                <div class="input-affix">
+                  <input
+                    class="input has-reveal"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    id="password"
+                    name="password"
+                    #password="ngModel"
+                    [(ngModel)]="model.password"
+                    required
+                    [minlength]="minPassword"
+                    autocomplete="new-password"
+                    placeholder="Mínimo {{ minPassword }} caracteres"
+                    [attr.aria-invalid]="password.invalid && password.touched"
+                  />
+                  <button
+                    type="button"
+                    class="reveal"
+                    (click)="showPassword.set(!showPassword())"
+                    [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    [attr.aria-pressed]="showPassword()"
+                  >
+                    {{ showPassword() ? 'Ocultar' : 'Mostrar' }}
+                  </button>
+                </div>
+                @if (password.invalid && password.touched) {
+                  <p class="field-error">
+                    <app-icon name="alert" [size]="13" />
+                    {{ password.errors?.['required']
+                        ? 'Asigna una contraseña temporal.'
+                        : 'La contraseña necesita al menos ' + minPassword + ' caracteres.' }}
+                  </p>
+                } @else {
+                  <p class="field-hint">
+                    Compártela por un canal seguro; el usuario deberá cambiarla al entrar.
+                  </p>
+                }
+              </div>
+            }
+
+            <div class="field" [class.is-invalid]="role.invalid && role.touched">
+              <label class="field-label" for="roleId">
+                Rol<span class="req" aria-hidden="true">*</span>
+              </label>
+              <select
+                class="select"
+                id="roleId"
+                name="roleId"
+                #role="ngModel"
+                [(ngModel)]="model.roleId"
+                required
+                [attr.aria-invalid]="role.invalid && role.touched"
+              >
+                @if (!roles().length) {
+                  <option [ngValue]="null">Sin catálogo disponible</option>
+                } @else {
+                  <option [ngValue]="null" disabled>Selecciona un rol</option>
+                  @for (r of roles(); track r.roleId) {
+                    <option [ngValue]="+r.roleId">{{ r.roleName }}</option>
+                  }
+                }
+              </select>
+              @if (role.invalid && role.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  Selecciona el rol del usuario.
+                </p>
+              } @else if (!roles().length) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  El catálogo de roles no respondió. No podrás guardar hasta que esté disponible.
+                </p>
+              }
+            </div>
+
+            @if (isEditMode()) {
+              <div class="field" [class.is-invalid]="status.invalid && status.touched">
+                <label class="field-label" for="statusId">
+                  Estado<span class="req" aria-hidden="true">*</span>
+                </label>
+                <select
+                  class="select"
+                  id="statusId"
+                  name="statusId"
+                  #status="ngModel"
+                  [(ngModel)]="model.statusId"
+                  required
+                  [attr.aria-invalid]="status.invalid && status.touched"
+                >
+                  @if (!statuses().length) {
+                    <option [ngValue]="null">Sin catálogo disponible</option>
+                  } @else {
+                    <option [ngValue]="null" disabled>Selecciona un estado</option>
+                    @for (s of statuses(); track s.statusId) {
+                      <option [ngValue]="+s.statusId">{{ s.statusName }}</option>
+                    }
+                  }
+                </select>
+                @if (status.invalid && status.touched) {
+                  <p class="field-error">
+                    <app-icon name="alert" [size]="13" />
+                    Selecciona el estado del usuario.
+                  </p>
+                }
+              </div>
+            }
+
+            @if (submitError()) {
+              <div class="alert alert-error span-2" role="alert">
+                <app-icon name="alert" />
+                <span>{{ submitError() }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="panel-foot form-foot">
+            <a class="btn btn-ghost" routerLink="/admin/users">Cancelar</a>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              @if (saving()) {
+                <span class="btn-spin" aria-hidden="true"></span>
+                Guardando…
+              } @else {
+                <app-icon name="check" [size]="15" />
+                {{ isEditMode() ? 'Guardar cambios' : 'Dar de alta' }}
+              }
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+  }
+</div>

@@ -1,0 +1,31 @@
+:host { display: block; }
+
+.dossier { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.dossier h1 { font-size: var(--fs-2xl); letter-spacing: -0.035em; }
+
+.dossier-meta {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  margin-top: 5px; font-size: var(--fs-sm); color: var(--text-muted);
+}
+.dossier-meta .dot { color: var(--text-faint); }
+.dossier-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+
+.panel-note { font-size: var(--fs-sm); color: var(--text-muted); letter-spacing: -0.02em; }
+.muted-cell { color: var(--text-muted); font-size: var(--fs-xs); }
+
+.facts { display: flex; flex-direction: column; }
+.facts > div {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 11px 0; border-bottom: 1px solid var(--line-faint);
+}
+.facts > div:first-child { padding-top: 0; }
+.facts > div:last-child { border-bottom: none; padding-bottom: 0; }
+.facts dt {
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.facts dd { font-size: var(--fs-sm); color: var(--text); overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .dossier h1 { font-size: var(--fs-xl); }
+}

@@ -40,3 +40,6 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Docker: el .env lleva claves y no se sube.
+.env

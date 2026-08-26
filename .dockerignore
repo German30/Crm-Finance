@@ -1,0 +1,40 @@
+# Dependencias y artefactos: se instalan y compilan DENTRO de la imagen. Copiarlos
+# desde la maquina anfitriona no solo engorda el contexto, tambien puede meter
+# binarios de otra plataforma (node_modules de Windows en una imagen Linux).
+node_modules/
+dist/
+.angular/
+tmp/
+out-tsc/
+coverage/
+
+# Entorno de desarrollo
+.vscode/
+.idea/
+.history/
+*.log
+npm-debug.log
+yarn-error.log
+
+# El proxy de desarrollo no aplica en el contenedor: ahi el reenvio de /api lo hace
+# nginx (docker/nginx.conf.template).
+proxy.conf.json
+
+# Secretos y configuracion local
+.env
+.env.*
+!.env.example
+
+# Control de versiones y documentacion
+.git/
+.gitignore
+*.md
+
+# Docker: no tiene sentido copiarse a si mismo dentro de la imagen.
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Ficheros de sistema
+.DS_Store
+Thumbs.db

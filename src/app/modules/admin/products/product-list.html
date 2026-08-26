@@ -1,0 +1,114 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Productos financieros</h1>
+      <p class="lede">
+        Catálogo de créditos, cuentas y pólizas disponibles para contratación.
+      </p>
+    </div>
+    <div class="actions">
+      <span class="head-total">
+        <span class="head-total-label">Activos</span>
+        <span class="num head-total-value">{{ fmtNumber(activeCount()) }}</span>
+      </span>
+    </div>
+  </div>
+
+  @if (!access.canManageProducts() && !loading()) {
+    <div class="alert alert-info" role="note">
+      <app-icon name="info" />
+      <span>
+        Estás viendo el catálogo en modo consulta. Dar de alta, editar o eliminar productos
+        está reservado al rol Administrador.
+      </span>
+    </div>
+  }
+
+  <section class="panel">
+    <div class="panel-head filters">
+      <div class="toolbar">
+        <div class="input-affix">
+          <app-icon name="search" />
+          <label class="sr-only" for="product-search">Buscar producto</label>
+          <input
+            class="input"
+            id="product-search"
+            type="search"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+            placeholder="Nombre o descripción"
+            autocomplete="off"
+          />
+        </div>
+
+        <label class="sr-only" for="product-area">Área</label>
+        <select class="select" id="product-area" [ngModel]="areaFilter()" (ngModelChange)="areaFilter.set($event)">
+          <option value="">Todas las áreas</option>
+          @for (a of areas(); track a.areaId) {
+            <option [value]="a.areaName">{{ a.areaName }}</option>
+          }
+        </select>
+
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">
+            <app-icon name="close" [size]="13" />
+            Limpiar
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="panel-body is-flush">
+      @if (errorText()) {
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo cargar el catálogo</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+        </div>
+      } @else if (loading()) {
+        <div class="product-grid">
+          @for (row of skeletonRows; track row) {
+            <div class="product-card">
+              <span class="skel" style="width: 60%; height: 14px"></span>
+              <span class="skel" style="width: 100%; margin-top: 12px"></span>
+              <span class="skel" style="width: 80%; margin-top: 6px"></span>
+            </div>
+          }
+        </div>
+      } @else if (filtered().length) {
+        <div class="product-grid">
+          @for (p of filtered(); track p.productId) {
+            <article class="product-card" [class.is-off]="!isActive(p)">
+              <header>
+                <span class="chip">{{ p.areaName }}</span>
+                <span [class]="isActive(p) ? 'badge badge-ok' : 'badge badge-off'">{{ p.statusName }}</span>
+              </header>
+              <h3>{{ p.productName }}</h3>
+              <p class="product-desc">{{ p.description || 'Sin descripción registrada.' }}</p>
+              <footer>
+                <span class="rate-label">{{ rateLabel(p) }}</span>
+                <span class="rate-value num">{{ formatRate(p.tasaInteresOPrimaBase) }}</span>
+              </footer>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="empty">
+          <app-icon name="products" [size]="26" />
+          <h4>
+            {{ hasFilters() ? 'Ningún producto coincide con estos filtros' : 'El catálogo está vacío' }}
+          </h4>
+          <p>
+            {{ hasFilters()
+                ? 'Prueba con otro término, o quita el filtro de área para ver el catálogo completo.'
+                : 'Cuando se den de alta productos financieros aparecerán aquí.' }}
+          </p>
+          @if (hasFilters()) {
+            <button type="button" class="btn btn-secondary" (click)="clearFilters()">Quitar filtros</button>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</div>

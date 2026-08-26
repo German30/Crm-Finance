@@ -1,0 +1,211 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Oportunidades</h1>
+      <p class="lede">
+        Embudo comercial por etapa. Cambiar la etapa de una oportunidad la mueve de columna
+        al instante.
+      </p>
+    </div>
+  </div>
+
+  @if (errorText()) {
+    <section class="panel">
+      <div class="panel-body">
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo cargar el embudo</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <div class="tape">
+      <div class="tape-cell">
+        <span class="tape-label">Valor del embudo</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtCompact(total()) }}<span class="unit">MXN</span> }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) { {{ fmtCompact(weighted()) }} ponderado por probabilidad }
+        </span>
+      </div>
+      <div class="tape-cell">
+        <span class="tape-label">Abiertas</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(openCount()) }} }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) { de {{ fmtNumber(filtered().length) }} en total }
+        </span>
+      </div>
+      <div class="tape-cell">
+        <span class="tape-label">Ganadas</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(wonCount()) }} }
+        </span>
+        <span class="tape-foot">@if (!loading()) { cerradas con éxito }</span>
+      </div>
+      <div class="tape-cell">
+        <span class="tape-label">Fecha vencida</span>
+        <span class="tape-value" [class.needs-eyes]="!loading() && overdue().length > 0">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(overdue().length) }} }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) {
+            {{ overdue().length ? 'Requieren replanteo de cierre' : 'Todo dentro de plazo' }}
+          }
+        </span>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head filters">
+        <div class="toolbar">
+          <div class="input-affix">
+            <app-icon name="search" />
+            <label class="sr-only" for="pipeline-search">Buscar oportunidad</label>
+            <input class="input" id="pipeline-search" type="search"
+                   [ngModel]="query()" (ngModelChange)="query.set($event)"
+                   placeholder="Cliente, producto o ejecutivo" autocomplete="off" />
+          </div>
+
+          <label class="sr-only" for="pipeline-area">Área</label>
+          <select class="select" id="pipeline-area" [ngModel]="areaFilter()" (ngModelChange)="areaFilter.set($event)">
+            <option value="">Todas las áreas</option>
+            @for (a of areas(); track a.areaId) {
+              <option [value]="a.areaName">{{ a.areaName }}</option>
+            }
+          </select>
+
+          @if (hasFilters()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">
+              <app-icon name="close" [size]="13" />
+              Limpiar
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="panel-body is-flush">
+        @if (loading()) {
+          <div class="board">
+            @for (col of [1,2,3,4]; track col) {
+              <div class="board-col">
+                <div class="col-head"><span class="skel" style="width: 96px"></span></div>
+                <div class="col-body">
+                  @for (card of [1,2,3]; track card) {
+                    <span class="skel" style="height: 84px; border-radius: 8px"></span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (!hasData()) {
+          <div class="empty">
+            <app-icon name="pipeline" [size]="26" />
+            <h4>El embudo está vacío</h4>
+            <p>
+              Cuando se registre la primera oportunidad comercial aparecerá aquí, en la
+              etapa que se le asigne.
+            </p>
+          </div>
+        } @else if (!filtered().length) {
+          <div class="empty">
+            <app-icon name="search" [size]="26" />
+            <h4>Ninguna oportunidad coincide con estos filtros</h4>
+            <p>Prueba con otro término, o quita el filtro de área.</p>
+            <button type="button" class="btn btn-secondary" (click)="clearFilters()">Quitar filtros</button>
+          </div>
+        } @else if (!columns().length) {
+          <div class="empty">
+            <app-icon name="alert" [size]="26" />
+            <h4>El catálogo de etapas no respondió</h4>
+            <p>Sin etapas no se puede armar el embudo. Vuelve a intentarlo en un momento.</p>
+            <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+          </div>
+        } @else {
+          <div class="board">
+            @for (col of columns(); track col.stage.id) {
+              <section class="board-col" [attr.aria-label]="col.stage.name">
+                <header class="col-head">
+                  <span class="col-name">{{ col.stage.name }}</span>
+                  <span class="col-count num">{{ fmtNumber(col.rows.length) }}</span>
+                </header>
+                <p class="col-total num">{{ fmtCompact(col.total) }}</p>
+
+                <div class="col-body">
+                  @for (o of col.rows; track o.oportunityId) {
+                    <article class="card" [class.is-busy]="movingId() === o.oportunityId">
+                      <h3>{{ o.clientName }}</h3>
+                      <p class="card-product">{{ o.prdoductName }}</p>
+
+                      <div class="card-amount">
+                        <span class="num">{{ o.estimatedMont != null ? fmtMoney(o.estimatedMont) : 'Sin monto' }}</span>
+                        <span class="card-prob num" [class]="probabilityTone(o.succesProbability)">
+                          {{ o.succesProbability }}%
+                        </span>
+                      </div>
+                      <div class="prob-bar" aria-hidden="true">
+                        <span [class]="'prob-fill ' + probabilityTone(o.succesProbability)"
+                              [style.width.%]="o.succesProbability"></span>
+                      </div>
+
+                      <footer class="card-foot">
+                        <span class="card-owner">{{ o.assignedUserName }}</span>
+                        @if (o.dateEstimatedClose) {
+                          <span class="card-date" [class.is-overdue]="isOverdue(o)">
+                            {{ fmtDate(o.dateEstimatedClose) }}
+                          </span>
+                        }
+                      </footer>
+
+                      <label class="sr-only" [attr.for]="'stage-' + o.oportunityId">
+                        Cambiar etapa de {{ o.clientName }}
+                      </label>
+                      <!-- ngModel, no [value]: enlazar `value` en un <select> cuyas
+                           opciones nacen en el mismo ciclo deja el control mostrando
+                           la primera opción, no la etapa real de la tarjeta. -->
+                      <select
+                        class="select select-stage"
+                        [id]="'stage-' + o.oportunityId"
+                        [ngModel]="col.stage.id"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="movingId() === o.oportunityId"
+                        (ngModelChange)="moveTo(o, $event)"
+                      >
+                        @for (s of stages(); track s.id) {
+                          <option [ngValue]="s.id">{{ s.name }}</option>
+                        }
+                      </select>
+                    </article>
+                  } @empty {
+                    <p class="col-empty">Sin oportunidades en esta etapa.</p>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+
+          @if (orphans().length) {
+            <div class="orphans">
+              <p>
+                <app-icon name="info" [size]="14" />
+                {{ fmtNumber(orphans().length) }} oportunidad(es) tienen una etapa que ya no
+                está en el catálogo y no caben en ninguna columna:
+                @for (o of orphans(); track o.oportunityId) {
+                  <span class="chip">{{ o.clientName }} · {{ o.stageName }}</span>
+                }
+              </p>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+</div>

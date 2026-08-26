@@ -1,0 +1,241 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Ajustes</h1>
+      <p class="lede">Tu sesión, lo que tu rol permite, la apariencia y la conexión.</p>
+    </div>
+  </div>
+
+  <div class="cols cols-main">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Cambiar contraseña</h2>
+        </div>
+        <form #pwForm="ngForm" (ngSubmit)="onChangePassword(pwForm)" novalidate>
+          <div class="panel-body pw-grid">
+            <div class="field" [class.is-invalid]="current.invalid && current.touched">
+              <label class="field-label" for="current">Contraseña actual</label>
+              <div class="input-affix">
+                <input
+                  class="input has-reveal"
+                  [type]="showCurrent() ? 'text' : 'password'"
+                  id="current"
+                  name="current"
+                  #current="ngModel"
+                  [(ngModel)]="passwords.current"
+                  required
+                  autocomplete="current-password"
+                  placeholder="Tu contraseña de ahora"
+                />
+                <button
+                  type="button"
+                  class="reveal"
+                  (click)="showCurrent.set(!showCurrent())"
+                  [attr.aria-label]="showCurrent() ? 'Ocultar contraseña actual' : 'Mostrar contraseña actual'"
+                  [attr.aria-pressed]="showCurrent()"
+                >{{ showCurrent() ? 'Ocultar' : 'Mostrar' }}</button>
+              </div>
+              @if (current.invalid && current.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  Captura tu contraseña actual.
+                </p>
+              }
+            </div>
+
+            <div class="field" [class.is-invalid]="next.invalid && next.touched">
+              <label class="field-label" for="next">Contraseña nueva</label>
+              <div class="input-affix">
+                <input
+                  class="input has-reveal"
+                  [type]="showNew() ? 'text' : 'password'"
+                  id="next"
+                  name="next"
+                  #next="ngModel"
+                  [(ngModel)]="passwords.next"
+                  required
+                  [minlength]="minPassword"
+                  autocomplete="new-password"
+                  placeholder="Mínimo {{ minPassword }} caracteres"
+                />
+                <button
+                  type="button"
+                  class="reveal"
+                  (click)="showNew.set(!showNew())"
+                  [attr.aria-label]="showNew() ? 'Ocultar contraseña nueva' : 'Mostrar contraseña nueva'"
+                  [attr.aria-pressed]="showNew()"
+                >{{ showNew() ? 'Ocultar' : 'Mostrar' }}</button>
+              </div>
+              @if (next.invalid && next.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  {{ next.errors?.['required']
+                      ? 'Escribe la contraseña nueva.'
+                      : 'Necesita al menos ' + minPassword + ' caracteres.' }}
+                </p>
+              }
+            </div>
+
+            <div class="field" [class.is-invalid]="confirm.invalid && confirm.touched">
+              <label class="field-label" for="confirm">Confirmar contraseña nueva</label>
+              <input
+                class="input"
+                type="password"
+                id="confirm"
+                name="confirm"
+                #confirm="ngModel"
+                [(ngModel)]="passwords.confirm"
+                required
+                autocomplete="new-password"
+                placeholder="Repítela para confirmar"
+              />
+              @if (confirm.invalid && confirm.touched) {
+                <p class="field-error">
+                  <app-icon name="alert" [size]="13" />
+                  Repite la contraseña nueva.
+                </p>
+              }
+            </div>
+
+            @if (formError()) {
+              <div class="alert alert-error" role="alert">
+                <app-icon name="alert" />
+                <span>{{ formError() }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="panel-foot pw-foot">
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              @if (saving()) {
+                <span class="btn-spin" aria-hidden="true"></span>
+                Guardando…
+              } @else {
+                <app-icon name="check" [size]="15" />
+                Actualizar contraseña
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Apariencia</h2>
+        </div>
+        <div class="panel-body">
+          <p class="section-note">
+            El tema se guarda en este navegador. Si eliges «Del sistema», el panel sigue la
+            preferencia de tu equipo y cambia contigo.
+          </p>
+          <div class="theme-grid" role="radiogroup" aria-label="Tema del panel">
+            @for (option of themeOptions; track option.value) {
+              <button
+                type="button"
+                class="theme-option"
+                role="radio"
+                [class.is-selected]="theme.choice() === option.value"
+                [attr.aria-checked]="theme.choice() === option.value"
+                (click)="theme.choice.set(option.value)"
+              >
+                <span class="theme-icon"><app-icon [name]="option.icon" [size]="17" /></span>
+                <span class="theme-label">{{ option.label }}</span>
+                <span class="theme-hint">{{ option.hint }}</span>
+                @if (theme.choice() === option.value) {
+                  <span class="theme-check" aria-hidden="true"><app-icon name="check" [size]="12" /></span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Conexión</h2>
+        </div>
+        <div class="panel-body">
+          <dl class="facts">
+            <div>
+              <dt>Servicio de datos</dt>
+              <dd class="num">{{ apiUrl }}</dd>
+            </div>
+            <div>
+              <dt>Origen de los datos</dt>
+              <dd>
+                Todo lo que muestra el panel proviene de la API del CRM. No hay datos
+                simulados en ninguna pantalla.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Tu sesión</h2>
+        </div>
+        <div class="panel-body">
+          <div class="me">
+            <span class="avatar avatar-lg is-accent">{{ initials(session()?.name ?? '?') }}</span>
+            <div class="me-id">
+              <span class="me-name">{{ session()?.name ?? 'Sin sesión' }}</span>
+              <span class="me-mail">{{ session()?.email || 'Sin correo en el token' }}</span>
+            </div>
+          </div>
+
+          <dl class="facts">
+            <div>
+              <dt>Rol</dt>
+              <dd>{{ session()?.role || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Área</dt>
+              <dd>{{ session()?.area || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Identificador</dt>
+              <dd class="num">{{ session()?.userId ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Vigencia del acceso</dt>
+              <dd>
+                @if (expiry(); as e) {
+                  <span class="num">{{ e.date }} · {{ e.time }}</span>
+                  <span class="fact-note">
+                    Quedan {{ e.minutesLeft }} minutos antes de tener que iniciar sesión de nuevo.
+                  </span>
+                } @else {
+                  Sin caducidad declarada en el token
+                }
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Lo que permite tu rol</h2>
+        </div>
+        <div class="panel-body">
+          <ul class="caps">
+            @for (cap of capabilities(); track cap.label) {
+              <li [class.is-off]="!cap.granted">
+                <app-icon [name]="cap.granted ? 'check' : 'close'" [size]="14" />
+                <span>{{ cap.label }}</span>
+              </li>
+            }
+          </ul>
+          <p class="fact-note caps-note">
+            Los permisos vienen del rol y del área que tiene tu cuenta. Para cambiarlos,
+            pídeselo a un Administrador.
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

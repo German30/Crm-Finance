@@ -1,0 +1,155 @@
+<div class="auth">
+  <!-- Left: the desk. Establishes what this product is before asking for credentials. -->
+  <section class="auth-desk" aria-labelledby="desk-title">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M6 23V9l10 10L26 9v14" fill="none" stroke="currentColor" stroke-width="2.6"
+              stroke-linecap="square" stroke-linejoin="miter" />
+      </svg>
+      <span class="brand-name">Meridian</span>
+    </div>
+
+    <div class="desk-copy">
+      <h1 id="desk-title">Quién entra al CRM, y con qué permisos.</h1>
+      <p>
+        Un solo directorio para las altas, las bajas y los roles del equipo.
+        Sin hojas de cálculo paralelas ni cuentas olvidadas.
+      </p>
+    </div>
+
+    <dl class="desk-facts">
+      <div>
+        <dt>Directorio único</dt>
+        <dd>Quién tiene acceso, con qué rol y desde qué área.</dd>
+      </div>
+      <div>
+        <dt>Altas y bajas</dt>
+        <dd>Revocar el acceso no borra el expediente de la persona.</dd>
+      </div>
+      <div>
+        <dt>Catálogo de roles</dt>
+        <dd>Los permisos vienen del rol, no de cada cuenta.</dd>
+      </div>
+    </dl>
+
+    <svg class="desk-line" viewBox="0 0 480 96" preserveAspectRatio="none" aria-hidden="true">
+      <path class="desk-line-path"
+            d="M0 74 L40 68 L80 71 L120 58 L160 62 L200 46 L240 51 L280 35 L320 40 L360 26 L400 30 L440 17 L480 12"
+            fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </section>
+
+  <!-- Right: the task. -->
+  <section class="auth-panel">
+    <button
+      type="button"
+      class="btn btn-ghost btn-icon theme-toggle"
+      (click)="theme.toggle()"
+      [attr.aria-label]="theme.isDark() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+    >
+      <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="17" />
+    </button>
+
+    <div class="auth-form-wrap">
+      <div class="brand brand-compact">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M6 23V9l10 10L26 9v14" fill="none" stroke="currentColor" stroke-width="2.6"
+                stroke-linecap="square" stroke-linejoin="miter" />
+        </svg>
+        <span class="brand-name">Meridian</span>
+      </div>
+
+      <h2 class="auth-title">Inicia sesión</h2>
+      <p class="auth-sub">Usa las credenciales que te asignó el administrador del sistema.</p>
+
+      <form #form="ngForm" (ngSubmit)="onSubmit(form)" novalidate>
+        <div class="field" [class.is-invalid]="email.invalid && email.touched">
+          <label class="field-label" for="email">Correo corporativo</label>
+          <div class="input-affix">
+            <app-icon name="mail" />
+            <input
+              class="input"
+              type="email"
+              id="email"
+              name="email"
+              #email="ngModel"
+              [(ngModel)]="credentials.Email"
+              required
+              email
+              autocomplete="username"
+              inputmode="email"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="nombre@meridian.mx"
+              [attr.aria-invalid]="email.invalid && email.touched"
+              [attr.aria-describedby]="email.invalid && email.touched ? 'email-error' : null"
+            />
+          </div>
+          @if (email.invalid && email.touched) {
+            <p class="field-error" id="email-error">
+              <app-icon name="alert" [size]="13" />
+              {{ email.errors?.['required'] ? 'Captura tu correo.' : 'Ese correo no tiene un formato válido.' }}
+            </p>
+          }
+        </div>
+
+        <div class="field" [class.is-invalid]="password.invalid && password.touched">
+          <label class="field-label" for="password">Contraseña</label>
+          <div class="input-affix">
+            <app-icon name="shield" />
+            <input
+              class="input has-reveal"
+              [type]="showPassword() ? 'text' : 'password'"
+              id="password"
+              name="password"
+              #password="ngModel"
+              [(ngModel)]="credentials.Password"
+              required
+              autocomplete="current-password"
+              placeholder="Tu contraseña"
+              [attr.aria-invalid]="password.invalid && password.touched"
+            />
+            <button
+              type="button"
+              class="reveal"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [attr.aria-pressed]="showPassword()"
+            >
+              {{ showPassword() ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+          @if (password.invalid && password.touched) {
+            <p class="field-error">
+              <app-icon name="alert" [size]="13" />
+              Captura tu contraseña.
+            </p>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <div class="alert alert-error" role="alert">
+            <app-icon name="alert" />
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <button type="submit" class="btn btn-primary btn-block auth-submit" [disabled]="isLoading()">
+          @if (isLoading()) {
+            <span class="btn-spin" aria-hidden="true"></span>
+            Verificando…
+          } @else {
+            Entrar al panel
+            <app-icon name="arrowRight" [size]="15" />
+          }
+        </button>
+      </form>
+
+      <p class="auth-foot">
+        ¿Sin acceso? Solicítalo a tu administrador.
+        <span class="auth-legal">© {{ year }} Meridian · Uso interno</span>
+      </p>
+    </div>
+  </section>
+</div>

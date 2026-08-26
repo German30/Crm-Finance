@@ -1,0 +1,250 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Usuarios del panel</h1>
+      <p class="lede">
+        Quién tiene acceso a Meridian, con qué rol y desde cuándo. Dar de baja revoca
+        el acceso sin borrar el expediente.
+      </p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-primary" routerLink="/admin/users/new">
+        <app-icon name="plus" />
+        Dar de alta
+      </a>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head filters">
+      <div class="toolbar">
+        <div class="input-affix">
+          <app-icon name="search" />
+          <label class="sr-only" for="user-search">Buscar usuario</label>
+          <input
+            class="input"
+            id="user-search"
+            type="search"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+            placeholder="Nombre, correo, rol o área"
+            autocomplete="off"
+          />
+        </div>
+        <label class="sr-only" for="user-status">Estado de acceso</label>
+        <select
+          class="select"
+          id="user-status"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event); onFilterChange()"
+        >
+          <option value="">Todos los estados</option>
+          <option value="activos">Con acceso</option>
+          <option value="inactivos">Dados de baja</option>
+        </select>
+
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">
+            <app-icon name="close" [size]="13" />
+            Limpiar
+          </button>
+        }
+
+        <div class="spacer"></div>
+        @if (!loading() && !errorText()) {
+          <span class="count-note">
+            <span class="num">{{ fmtNumber(activeCount()) }}</span> activos ·
+            <span class="num">{{ fmtNumber(users().length) }}</span> en total
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="panel-body is-flush">
+      @if (errorText()) {
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo cargar el directorio</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="loadUsers()">Reintentar</button>
+        </div>
+      } @else {
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'name'"
+                    [attr.aria-sort]="ariaSort('name')" (click)="sortBy('name')">
+                  Usuario<span class="sort-mark">{{ sortMark('name') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'roleName'"
+                    [attr.aria-sort]="ariaSort('roleName')" (click)="sortBy('roleName')">
+                  Rol<span class="sort-mark">{{ sortMark('roleName') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'areaName'"
+                    [attr.aria-sort]="ariaSort('areaName')" (click)="sortBy('areaName')">
+                  Área<span class="sort-mark">{{ sortMark('areaName') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'creationDate'"
+                    [attr.aria-sort]="ariaSort('creationDate')" (click)="sortBy('creationDate')">
+                  Alta<span class="sort-mark">{{ sortMark('creationDate') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'statusName'"
+                    [attr.aria-sort]="ariaSort('statusName')" (click)="sortBy('statusName')">
+                  Estado<span class="sort-mark">{{ sortMark('statusName') }}</span>
+                </th>
+                <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading()) {
+                @for (row of skeletonRows; track row) {
+                  <tr>
+                    <td><span class="skel" style="width: 180px"></span></td>
+                    <td><span class="skel" style="width: 84px"></span></td>
+                    <td><span class="skel" style="width: 96px"></span></td>
+                    <td><span class="skel" style="width: 78px"></span></td>
+                    <td><span class="skel" style="width: 62px"></span></td>
+                    <td></td>
+                  </tr>
+                }
+              } @else if (pageRows().length) {
+                @for (user of pageRows(); track user.userId) {
+                  <tr [class.is-inactive]="!isActive(user)">
+                    <td>
+                      <div class="user-cell">
+                        <span class="avatar">{{ initials(user.name || user.email || '?') }}</span>
+                        <span>
+                          <span class="cell-strong">
+                            {{ user.name }}
+                            @if (isSelf(user)) { <span class="you">Tú</span> }
+                          </span>
+                          <span class="cell-sub">{{ user.email }}</span>
+                        </span>
+                      </div>
+                    </td>
+                    <td><span class="chip">{{ user.roleName || '—' }}</span></td>
+                    <td class="muted-cell">{{ user.areaName || '—' }}</td>
+                    <td class="num muted-cell">{{ fmtDate(user.creationDate) }}</td>
+                    <td>
+                      <span [class]="isActive(user) ? 'badge badge-ok' : 'badge badge-off'">
+                        {{ user.statusName || '—' }}
+                      </span>
+                    </td>
+                    <td class="col-actions">
+                      <span class="row-actions">
+                        <a
+                          class="btn btn-ghost btn-sm btn-icon"
+                          [routerLink]="['/admin/users/edit', user.userId]"
+                          [attr.aria-label]="'Editar a ' + user.name"
+                          title="Editar"
+                        >
+                          <app-icon name="edit" [size]="14" />
+                        </a>
+                        <button
+                          type="button"
+                          class="btn btn-ghost btn-sm btn-icon"
+                          (click)="askToggle(user)"
+                          [disabled]="togglingId() === user.userId || isSelf(user)"
+                          [attr.aria-label]="
+                            (isActive(user) ? 'Dar de baja a ' : 'Reactivar a ') + user.name
+                          "
+                          [title]="
+                            isSelf(user)
+                              ? 'No puedes cambiar el estado de tu propia cuenta'
+                              : isActive(user) ? 'Dar de baja' : 'Reactivar'
+                          "
+                        >
+                          @if (togglingId() === user.userId) {
+                            <span class="btn-spin" aria-hidden="true"></span>
+                          } @else {
+                            <app-icon name="power" [size]="14" />
+                          }
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                }
+              } @else if (hasFilters()) {
+                <tr>
+                  <td colspan="6">
+                    <div class="empty">
+                      <app-icon name="search" [size]="26" />
+                      <h4>Ningún usuario coincide con estos filtros</h4>
+                      <p>Revisa la escritura, o quita el filtro de estado para ver el directorio completo.</p>
+                      <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+                        Quitar filtros
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td colspan="6">
+                    <div class="empty">
+                      <app-icon name="users" [size]="26" />
+                      <h4>Todavía no hay usuarios dados de alta</h4>
+                      <p>
+                        Crea la primera cuenta para que tu equipo pueda entrar al panel. Cada
+                        usuario recibe un rol que define lo que puede ver y modificar.
+                      </p>
+                      <a class="btn btn-primary" routerLink="/admin/users/new">
+                        <app-icon name="plus" [size]="15" />
+                        Dar de alta al primer usuario
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    @if (!loading() && !errorText() && totalPages() > 1) {
+      <div class="panel-foot">
+        <span class="pager-info">{{ rangeLabel() }}</span>
+        <div class="pager">
+          <button
+            type="button"
+            class="pager-btn"
+            [disabled]="currentPage() === 1"
+            (click)="page.set(currentPage() - 1)"
+            aria-label="Página anterior"
+          >
+            <app-icon name="chevronLeft" [size]="13" />
+          </button>
+          @for (n of pageNumbers(); track n) {
+            <button
+              type="button"
+              class="pager-btn"
+              [class.is-active]="n === currentPage()"
+              (click)="page.set(n)"
+              [attr.aria-current]="n === currentPage() ? 'page' : null"
+            >{{ n }}</button>
+          }
+          <button
+            type="button"
+            class="pager-btn"
+            [disabled]="currentPage() === totalPages()"
+            (click)="page.set(currentPage() + 1)"
+            aria-label="Página siguiente"
+          >
+            <app-icon name="chevronRight" [size]="13" />
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+</div>
+
+<app-confirm-dialog
+  [title]="dialogTitle()"
+  [message]="dialogMessage()"
+  [confirmLabel]="dialogConfirmLabel()"
+  cancelLabel="Cancelar"
+  [danger]="!!pending() && isActive(pending()!)"
+  (confirmed)="onConfirm()"
+  (cancelled)="onCancel()"
+/>

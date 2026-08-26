@@ -1,0 +1,171 @@
+<div class="page">
+  <nav class="crumbs" aria-label="Ruta">
+    <a routerLink="/admin/contracts">Contratos</a>
+    <app-icon name="chevronRight" [size]="11" />
+    <span>{{ head()?.referenceNumber || 'Detalle' }}</span>
+  </nav>
+
+  @if (loading()) {
+    <section class="panel">
+      <div class="panel-body" style="display: grid; gap: 18px">
+        <span class="skel" style="width: 240px; height: 24px"></span>
+        <span class="skel" style="width: 100%; height: 80px"></span>
+        <span class="skel" style="width: 100%; height: 200px"></span>
+      </div>
+    </section>
+  } @else if (errorText() || !found()) {
+    <section class="panel">
+      <div class="panel-body">
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se puede mostrar este contrato</h4>
+          <p>{{ errorText() || 'El contrato no existe o fue dado de baja.' }}</p>
+          <a class="btn btn-secondary" routerLink="/admin/contracts">Volver a contratos</a>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <header class="dossier">
+      <div>
+        <h1 class="num">{{ head()!.referenceNumber }}</h1>
+        <p class="dossier-meta">
+          <span>{{ head()!.clientName }}</span>
+          <span class="dot" aria-hidden="true">·</span>
+          <span>{{ head()!.productName }}</span>
+        </p>
+        <div class="dossier-badges">
+          <span [class]="statusClass(head()!.contractStatusName)">{{ head()!.contractStatusName }}</span>
+          <span class="chip">{{ isBank() ? 'Banca' : 'Seguros' }}</span>
+          <span class="chip">Emitido {{ fmtDate(head()!.dateOpeningIssue) }}</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="tape">
+      @for (figure of figures(); track figure.label) {
+        <div class="tape-cell">
+          <span class="tape-label">{{ figure.label }}</span>
+          <span class="tape-value">
+            {{ figure.value }}@if (figure.unit) { <span class="unit">{{ figure.unit }}</span> }
+          </span>
+        </div>
+      }
+    </div>
+
+    <div class="cols cols-main">
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">{{ isBank() ? 'Movimientos' : 'Siniestros' }}</h2>
+          @if (isBank() && transactions().length) {
+            <span class="panel-note num">{{ fmtMoney(movementTotal()) }}</span>
+          }
+        </div>
+        <div class="panel-body is-flush">
+          @if (operationsDenied()) {
+            <div class="empty">
+              <app-icon name="alert" [size]="26" />
+              <h4>Sin acceso a las operaciones</h4>
+              <p>
+                Tu rol puede leer el contrato, pero
+                {{ isBank() ? 'los movimientos bancarios' : 'los siniestros' }}
+                están reservados a esa área.
+              </p>
+            </div>
+          } @else if (isBank()) {
+            @if (transactions().length) {
+              <div class="tbl-scroll">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th scope="col">Tipo</th>
+                      <th scope="col">Referencia</th>
+                      <th scope="col" class="col-num">Monto</th>
+                      <th scope="col">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (t of transactions(); track t.transactionId) {
+                      <tr>
+                        <td class="cell-strong">{{ t.transactionTypeName }}</td>
+                        <td class="num muted-cell">{{ t.referenceNumber || '—' }}</td>
+                        <td class="col-num">{{ fmtMoney(t.amount) }}</td>
+                        <td class="num muted-cell">{{ fmtDate(t.dateTransaction) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty">
+                <app-icon name="operations" [size]="26" />
+                <h4>Sin movimientos registrados</h4>
+                <p>Este contrato todavía no tiene depósitos, retiros ni amortizaciones.</p>
+              </div>
+            }
+          } @else {
+            @if (claims().length) {
+              <div class="tbl-scroll">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th scope="col">Estado del siniestro</th>
+                      <th scope="col">Descripción</th>
+                      <th scope="col" class="col-num">Reclamado</th>
+                      <th scope="col" class="col-num">Autorizado</th>
+                      <th scope="col">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of claims(); track c.insuranceId) {
+                      <tr>
+                        <td class="cell-strong">{{ c.disasterStateName }}</td>
+                        <td class="muted-cell">{{ c.description || '—' }}</td>
+                        <td class="col-num">{{ c.amountClaimed != null ? fmtMoney(c.amountClaimed) : '—' }}</td>
+                        <td class="col-num">{{ c.amountApproved != null ? fmtMoney(c.amountApproved) : '—' }}</td>
+                        <td class="num muted-cell">{{ fmtDate(c.dateClaim) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty">
+                <app-icon name="shield" [size]="26" />
+                <h4>Sin siniestros reportados</h4>
+                <p>Esta póliza no registra reclamaciones. Es la mejor noticia posible.</p>
+              </div>
+            }
+          }
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Detalle del contrato</h2>
+        </div>
+        <div class="panel-body">
+          <dl class="facts">
+            <div>
+              <dt>Cliente</dt>
+              <dd>{{ head()!.clientName }}</dd>
+            </div>
+            <div>
+              <dt>Producto</dt>
+              <dd>{{ head()!.productName }}</dd>
+            </div>
+            @for (fact of extraFacts(); track fact.label) {
+              <div>
+                <dt>{{ fact.label }}</dt>
+                <dd [class.num]="fact.mono">{{ fact.value }}</dd>
+              </div>
+            }
+            <div>
+              <dt>Emisión</dt>
+              <dd class="num">{{ fmtDate(head()!.dateOpeningIssue) }}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+    </div>
+  }
+</div>

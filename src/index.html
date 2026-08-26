@@ -1,11 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>CrmFrontend</title>
+  <title>Meridian · CRM Financiero</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="description" content="Meridian — plataforma de gestión de cartera, clientes y operaciones financieras.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0b0d10">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    // Applied before first paint so the shell never flashes the wrong theme.
+    (function () {
+      try {
+        var t = localStorage.getItem('meridian.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* storage blocked — fall back to the system preference */ }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

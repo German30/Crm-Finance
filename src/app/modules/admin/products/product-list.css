@@ -1,0 +1,69 @@
+:host { display: block; }
+
+.filters { padding: 12px 14px; }
+
+.head-total {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  padding-left: 18px; border-left: 1px solid var(--line);
+}
+.head-total-label {
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.head-total-value { font-size: var(--fs-lg); font-weight: 500; letter-spacing: -0.03em; }
+
+/* Una rejilla de fichas, no una tabla: el catálogo se hojea, no se audita. */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border-top: 1px solid var(--line);
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 14px;
+  background: var(--bg-surface);
+  min-height: 156px;
+  transition: background-color var(--dur) var(--ease);
+}
+.product-card:hover { background: var(--bg-raised); }
+.product-card.is-off { opacity: 0.72; }
+
+.product-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.product-card h3 { font-size: var(--fs-md); letter-spacing: -0.015em; }
+
+.product-desc {
+  flex: 1;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-card footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-faint);
+}
+
+.rate-label {
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.rate-value { font-size: var(--fs-lg); font-weight: 500; letter-spacing: -0.03em; color: var(--accent); }
+
+@media (max-width: 640px) {
+  .head-total { border-left: none; padding-left: 0; align-items: flex-start; }
+  .toolbar .input-affix { width: 100%; }
+  .toolbar .select { flex: 1; min-width: 0; }
+}

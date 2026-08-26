@@ -1,0 +1,208 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Contratos</h1>
+      <p class="lede">Créditos, cuentas y pólizas emitidas, con su estado de vigencia.</p>
+    </div>
+    <div class="actions">
+      <span class="head-total">
+        <span class="head-total-label">Vigentes</span>
+        <span class="num head-total-value">{{ fmtNumber(openCount()) }}</span>
+      </span>
+    </div>
+  </div>
+
+  @if (!loading() && lockedCount() > 0) {
+    <div class="alert alert-info" role="note">
+      <app-icon name="info" />
+      <span>
+        {{ fmtNumber(lockedCount()) }} de estos contratos son de un área distinta a la tuya
+        ({{ access.area() }}). Los ves en la rejilla, pero su detalle está reservado a esa área.
+      </span>
+    </div>
+  }
+
+  <section class="panel">
+    <div class="panel-head filters">
+      <div class="toolbar">
+        <div class="input-affix">
+          <app-icon name="search" />
+          <label class="sr-only" for="contract-search">Buscar contrato</label>
+          <input
+            class="input"
+            id="contract-search"
+            type="search"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event); onFilterChange()"
+            placeholder="Referencia, cliente o producto"
+            autocomplete="off"
+          />
+        </div>
+
+        <label class="sr-only" for="contract-area">Área</label>
+        <select
+          class="select"
+          id="contract-area"
+          [ngModel]="areaFilter()"
+          (ngModelChange)="areaFilter.set($event); onFilterChange()"
+        >
+          <option value="">Todas las áreas</option>
+          @for (a of areas(); track a.areaId) {
+            <option [value]="a.areaName">{{ a.areaName }}</option>
+          }
+        </select>
+
+        <label class="sr-only" for="contract-status">Estado</label>
+        <select
+          class="select"
+          id="contract-status"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event); onFilterChange()"
+        >
+          <option value="">Todos los estados</option>
+          @for (s of statuses(); track s.id) {
+            <option [value]="s.name">{{ s.name }}</option>
+          }
+        </select>
+
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">
+            <app-icon name="close" [size]="13" />
+            Limpiar
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="panel-body is-flush">
+      @if (errorText()) {
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudieron cargar los contratos</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+        </div>
+      } @else {
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'referenceNumber'"
+                    [attr.aria-sort]="ariaSort('referenceNumber')" (click)="sortBy('referenceNumber')">
+                  Referencia<span class="sort-mark">{{ sortMark('referenceNumber') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'clientName'"
+                    [attr.aria-sort]="ariaSort('clientName')" (click)="sortBy('clientName')">
+                  Cliente<span class="sort-mark">{{ sortMark('clientName') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'productName'"
+                    [attr.aria-sort]="ariaSort('productName')" (click)="sortBy('productName')">
+                  Producto<span class="sort-mark">{{ sortMark('productName') }}</span>
+                </th>
+                <th scope="col">Área</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'dateOpeningIssue'"
+                    [attr.aria-sort]="ariaSort('dateOpeningIssue')" (click)="sortBy('dateOpeningIssue')">
+                  Emisión<span class="sort-mark">{{ sortMark('dateOpeningIssue') }}</span>
+                </th>
+                <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading()) {
+                @for (row of skeletonRows; track row) {
+                  <tr>
+                    <td><span class="skel" style="width: 104px"></span></td>
+                    <td><span class="skel" style="width: 168px"></span></td>
+                    <td><span class="skel" style="width: 132px"></span></td>
+                    <td><span class="skel" style="width: 68px"></span></td>
+                    <td><span class="skel" style="width: 68px"></span></td>
+                    <td><span class="skel" style="width: 80px"></span></td>
+                    <td></td>
+                  </tr>
+                }
+              } @else if (pageRows().length) {
+                @for (c of pageRows(); track c.contractId) {
+                  <tr [class.is-locked]="!canOpen(c)">
+                    <td class="num ref">
+                      @if (canOpen(c)) {
+                        <a [routerLink]="detailLink(c)">{{ c.referenceNumber }}</a>
+                      } @else {
+                        {{ c.referenceNumber }}
+                      }
+                    </td>
+                    <td class="cell-strong">{{ c.clientName }}</td>
+                    <td class="muted-cell">{{ c.productName }}</td>
+                    <td><span class="chip">{{ c.areaName }}</span></td>
+                    <td><span [class]="statusClass(c.contractStatusName)">{{ c.contractStatusName }}</span></td>
+                    <td class="date-cell">
+                      <span class="num">{{ fmtDate(c.dateOpeningIssue) }}</span>
+                      <span class="cell-sub">{{ fmtAgo(c.dateOpeningIssue) }}</span>
+                    </td>
+                    <td class="col-actions">
+                      @if (canOpen(c)) {
+                        <span class="row-actions">
+                          <a class="btn btn-ghost btn-sm btn-icon" [routerLink]="detailLink(c)"
+                             [attr.aria-label]="'Abrir contrato ' + c.referenceNumber">
+                            <app-icon name="chevronRight" [size]="14" />
+                          </a>
+                        </span>
+                      } @else {
+                        <span class="locked-note" [title]="'Detalle reservado al área ' + c.areaName">
+                          Área {{ c.areaName }}
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                }
+              } @else if (hasFilters()) {
+                <tr>
+                  <td colspan="7">
+                    <div class="empty">
+                      <app-icon name="search" [size]="26" />
+                      <h4>Ningún contrato coincide con estos filtros</h4>
+                      <p>Ajusta la búsqueda, o quita los filtros de área y estado.</p>
+                      <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+                        Quitar filtros
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td colspan="7">
+                    <div class="empty">
+                      <app-icon name="contracts" [size]="26" />
+                      <h4>Todavía no hay contratos emitidos</h4>
+                      <p>En cuanto se emita el primer crédito o póliza aparecerá en esta rejilla.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    @if (!loading() && !errorText() && totalPages() > 1) {
+      <div class="panel-foot">
+        <span class="pager-info">{{ rangeLabel() }}</span>
+        <div class="pager">
+          <button type="button" class="pager-btn" [disabled]="currentPage() === 1"
+                  (click)="page.set(currentPage() - 1)" aria-label="Página anterior">
+            <app-icon name="chevronLeft" [size]="13" />
+          </button>
+          @for (n of pageNumbers(); track n) {
+            <button type="button" class="pager-btn" [class.is-active]="n === currentPage()"
+                    (click)="page.set(n)" [attr.aria-current]="n === currentPage() ? 'page' : null">{{ n }}</button>
+          }
+          <button type="button" class="pager-btn" [disabled]="currentPage() === totalPages()"
+                  (click)="page.set(currentPage() + 1)" aria-label="Página siguiente">
+            <app-icon name="chevronRight" [size]="13" />
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,38 @@
+:host { display: block; }
+
+.filters { padding: 12px 14px; }
+
+.head-total {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  padding-left: 18px; border-left: 1px solid var(--line);
+}
+.head-total-label {
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.head-total-value { font-size: var(--fs-lg); font-weight: 500; letter-spacing: -0.03em; }
+
+.ref a { color: var(--text); font-weight: 500; }
+.ref a:hover { color: var(--accent); }
+
+.muted-cell { color: var(--text-muted); font-size: var(--fs-xs); }
+.date-cell { white-space: nowrap; font-size: var(--fs-xs); color: var(--text-muted); }
+.date-cell .cell-sub { color: var(--text-faint); }
+
+/* Un contrato de otra area se lee, pero se nota que no es tuyo. */
+tr.is-locked .ref, tr.is-locked .cell-strong { color: var(--text-muted); }
+
+.locked-note {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  cursor: help;
+}
+
+@media (max-width: 640px) {
+  .head-total { border-left: none; padding-left: 0; align-items: flex-start; }
+  .toolbar .input-affix { width: 100%; }
+  .toolbar .select { flex: 1; min-width: 0; }
+}

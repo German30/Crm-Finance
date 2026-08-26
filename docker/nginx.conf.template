@@ -1,0 +1,127 @@
+# =============================================================================
+# Meridian — configuracion de nginx
+#
+# Se procesa con envsubst al arrancar el contenedor. Solo se sustituyen las
+# variables que empiezan por API_ (NGINX_ENVSUBST_FILTER en el Dockerfile); las
+# variables propias de nginx ($uri, $host, ...) se quedan tal cual.
+# =============================================================================
+
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Angular ya sirve todo minificado; aqui se comprime al vuelo lo que el
+    # navegador acepte. Los binarios (imagenes, fuentes woff2) ya vienen
+    # comprimidos y no se tocan.
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/manifest+json
+        image/svg+xml;
+
+    # La cabecera Server delata la version exacta de nginx. No aporta nada al
+    # usuario y sí a quien busca versiones con fallos conocidos.
+    server_tokens off;
+
+    # OJO con add_header en nginx: NO se hereda por acumulacion. Si un `location`
+    # declara aunque sea un add_header propio, PIERDE todos los del nivel de
+    # arriba. Por eso las cabeceras de seguridad se agrupan en un fichero y se
+    # incluyen explicitamente en cada location que las necesita.
+    include /etc/nginx/conf.d/seguridad.inc;
+
+    # ---------------------------------------------------------------- API ----
+    # El reenvio va ANTES del fallback de la SPA: si no, una ruta /api que el
+    # backend no conoce devolveria el index.html con un 200 y el frontend
+    # intentaria parsear HTML como JSON.
+    location /api/ {
+        # proxy_pass LITERAL, sin barra ni ruta al final: asi nginx conserva el
+        # URI original completo (/api/Auth/login llega tal cual). Si API_UPSTREAM
+        # terminara en "/", nginx lo tomaria como una ruta y reemplazaria el
+        # /api/ por ella; el script 15-normaliza-api-upstream.sh recorta esa barra
+        # antes de que se genere esta configuracion.
+        #
+        # Se evita a proposito el patron `set $var ...; proxy_pass $var...`: al usar
+        # una variable, nginx deja de consultar /etc/hosts y exige un `resolver`.
+        # Eso rompe justo los dos casos habituales — host.docker.internal (que se
+        # resuelve por /etc/hosts) y la red bridge por defecto (que no tiene DNS
+        # interno en 127.0.0.11).
+        #
+        # A cambio, nginx resuelve el nombre al arrancar y lo cachea: si el
+        # contenedor de la API cambia de IP, basta con `docker compose restart web`.
+        proxy_pass ${API_UPSTREAM};
+
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        # El JWT viaja aqui: si no se reenvia, toda la API responde 401.
+        proxy_set_header Authorization $http_authorization;
+        proxy_pass_header Authorization;
+
+        # Una respuesta de la API no se cachea nunca: son datos vivos.
+        proxy_buffering off;
+        add_header Cache-Control "no-store" always;
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+
+        # El backend responde 401/403/404/409 con un cuerpo JSON que el frontend
+        # convierte en un mensaje legible. Sin esto, nginx se lo comeria y
+        # mostraria su propia pagina de error.
+        proxy_intercept_errors off;
+    }
+
+    # ------------------------------------------------------------- sondeo ----
+    # Anonimo y sin log: lo consulta Docker cada pocos segundos.
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    # ------------------------------------------------------------ estatico ---
+    # Los ficheros con hash en el nombre (main-A1B2C3.js) son inmutables por
+    # definicion: si cambia el contenido, cambia el nombre. Se cachean un anio.
+    location ~* "^.+\-[A-Z0-9]{8,}\.(js|css)$" {
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location ~* \.(woff2|woff|ttf|eot|svg|png|jpg|jpeg|gif|webp|avif|ico)$ {
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000" always;
+        try_files $uri =404;
+    }
+
+    # index.html NO se cachea. Es el unico fichero sin hash, y es el que apunta a
+    # todos los demas: si un navegador se queda con uno viejo, el usuario sigue
+    # cargando la version anterior aunque se despliegue una nueva.
+    location = /index.html {
+        include /etc/nginx/conf.d/seguridad.inc;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+    }
+
+    # -------------------------------------------------------------- SPA ------
+    # El enrutador de Angular usa rutas reales (/admin/clients, no #/admin/...).
+    # Una recarga en esa URL pide al servidor un fichero que no existe: hay que
+    # devolver index.html y dejar que el enrutador resuelva del lado del cliente.
+    location / {
+        include /etc/nginx/conf.d/seguridad.inc;
+        try_files $uri $uri/ /index.html;
+    }
+}

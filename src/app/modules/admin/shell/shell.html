@@ -1,0 +1,133 @@
+<a class="skip-link" href="#main">Ir al contenido</a>
+
+<div class="shell" [class.rail-open]="railOpen()">
+  <!-- ------------------------------------------------------------- rail -- -->
+  <aside class="rail">
+    <div class="rail-brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M6 23V9l10 10L26 9v14" fill="none" stroke="currentColor" stroke-width="2.6"
+              stroke-linecap="square" stroke-linejoin="miter" />
+      </svg>
+      <span class="brand-name">Meridian</span>
+      <button
+        type="button"
+        class="btn btn-ghost btn-icon btn-sm rail-close"
+        (click)="railOpen.set(false)"
+        aria-label="Cerrar navegación"
+      >
+        <app-icon name="close" [size]="15" />
+      </button>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegación principal">
+      @for (item of nav(); track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          #rla="routerLinkActive"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
+        >
+          <app-icon [name]="item.icon" [size]="17" />
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="rail-foot">
+      <div class="env-note">
+        <span class="env-dot" aria-hidden="true"></span>
+        {{ access.scopeLabel() }}
+      </div>
+    </div>
+  </aside>
+
+  <div class="rail-scrim" (click)="railOpen.set(false)" aria-hidden="true"></div>
+
+  <!-- -------------------------------------------------------------- bar -- -->
+  <div class="frame">
+    <header class="bar">
+      <button
+        type="button"
+        class="btn btn-ghost btn-icon bar-menu"
+        (click)="railOpen.set(true)"
+        aria-label="Abrir navegación"
+      >
+        <app-icon name="menu" [size]="18" />
+      </button>
+
+      <div class="bar-clock">
+        <app-icon name="clock" [size]="14" />
+        <span>{{ clock() }}</span>
+      </div>
+
+      <div class="bar-spacer"></div>
+
+      <button
+        type="button"
+        class="btn btn-ghost btn-icon"
+        (click)="theme.toggle()"
+        [attr.aria-label]="theme.isDark() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+      >
+        <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="17" />
+      </button>
+
+      <div class="account">
+        <button
+          type="button"
+          class="account-trigger"
+          (click)="menuOpen.set(!menuOpen())"
+          [attr.aria-expanded]="menuOpen()"
+          aria-haspopup="menu"
+        >
+          <span class="avatar is-accent">{{ initials() }}</span>
+          <span class="account-id">
+            <span class="account-name">{{ session()?.name }}</span>
+            <span class="account-role">{{ session()?.role }}</span>
+          </span>
+          <app-icon name="chevronDown" [size]="14" />
+        </button>
+
+        @if (menuOpen()) {
+          <div class="menu" role="menu">
+            <div class="menu-head">
+              <span class="menu-name">{{ session()?.name }}</span>
+              <span class="menu-mail">{{ session()?.email || 'Sin correo en el token' }}</span>
+              <span class="menu-role">
+                <span class="chip">{{ session()?.role || 'Sin rol' }}</span>
+                <span class="chip">{{ session()?.area || 'Sin área' }}</span>
+              </span>
+            </div>
+            <a class="menu-item" routerLink="/admin/settings" role="menuitem">
+              <app-icon name="settings" [size]="15" />
+              Ajustes de la cuenta
+            </a>
+            <button type="button" class="menu-item is-danger" role="menuitem" (click)="confirmLogout(logoutDialog)">
+              <app-icon name="logout" [size]="15" />
+              Cerrar sesión
+            </button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="canvas" id="main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<!-- Backdrop click closes the account menu without swallowing other clicks. -->
+@if (menuOpen()) {
+  <div class="menu-scrim" (click)="menuOpen.set(false)" aria-hidden="true"></div>
+}
+
+<app-confirm-dialog
+  #logoutDialog
+  title="Cerrar sesión"
+  message="Se cerrará tu sesión en este equipo. Tendrás que volver a capturar tus credenciales para entrar."
+  confirmLabel="Cerrar sesión"
+  cancelLabel="Seguir trabajando"
+  [danger]="true"
+  (confirmed)="doLogout()"
+/>

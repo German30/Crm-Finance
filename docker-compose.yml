@@ -1,0 +1,43 @@
+# =============================================================================
+# Meridian — frontend
+#
+#   docker compose up -d --build      ->  http://localhost:4200
+#
+# Levanta SOLO el frontend. Se usa cuando el backend ya corre por su cuenta
+# (por ejemplo con el docker-compose del propio CRMFinaciertoBackend).
+#
+# Por defecto reenvia /api al backend que escucha en la MAQUINA ANFITRIONA, no
+# dentro de esta red: host.docker.internal es el nombre con el que un contenedor
+# alcanza a su anfitrion. Asi funciona tanto con el backend en Docker (publicado
+# en el 5170) como con el backend arrancado desde Visual Studio.
+#
+# Para levantar TODA la pila (MySQL + API + frontend) de un solo comando:
+#
+#   docker compose -f docker-compose.full.yml up -d --build
+# =============================================================================
+
+services:
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-web
+    environment:
+      # A donde reenvia nginx todo lo que llegue a /api.
+      API_UPSTREAM: ${API_UPSTREAM:-http://host.docker.internal:5170}
+    ports:
+      # 4200 por fuera para no chocar con nada y porque es el origen que el
+      # backend trae ya en su lista de CORS. Dentro, el 8080 sin privilegios.
+      - "${WEB_PORT:-4200}:8080"
+    extra_hosts:
+      # En Linux, host.docker.internal no existe salvo que se declare. En Docker
+      # Desktop (Windows y macOS) ya viene resuelto y esta linea es inofensiva.
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

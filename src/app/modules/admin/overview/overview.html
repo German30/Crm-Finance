@@ -1,0 +1,313 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>{{ greeting() }}</h1>
+      <p class="lede">
+        {{ today }} · <span class="scope">{{ access.scopeLabel() }}</span>
+      </p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary" routerLink="/admin/clients">
+        <app-icon name="clients" />
+        Clientes
+      </a>
+      <a class="btn btn-primary" routerLink="/admin/pipeline">
+        <app-icon name="pipeline" />
+        Oportunidades
+      </a>
+    </div>
+  </div>
+
+  @if (errorText()) {
+    <section class="panel">
+      <div class="panel-body">
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo cargar el panorama</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <div class="tape">
+      <div class="tape-cell">
+        <span class="tape-label">Cartera de clientes</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(clients().length) }} }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) { {{ fmtNumber(activeProducts()) }} productos disponibles }
+        </span>
+      </div>
+
+      <div class="tape-cell">
+        <span class="tape-label">Contratos vigentes</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(openContracts().length) }} }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) { de {{ fmtNumber(contracts().length) }} emitidos }
+        </span>
+      </div>
+
+      <div class="tape-cell">
+        <span class="tape-label">Embudo ponderado</span>
+        <span class="tape-value">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtCompact(pipelineWeighted()) }}<span class="unit">MXN</span> }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) { {{ fmtCompact(pipelineTotal()) }} sin ponderar }
+        </span>
+      </div>
+
+      <div class="tape-cell">
+        <span class="tape-label">Oportunidades abiertas</span>
+        <span class="tape-value" [class.needs-eyes]="!loading() && overdue().length > 0">
+          @if (loading()) { <span class="skel tape-skel"></span> }
+          @else { {{ fmtNumber(openOportunities().length) }} }
+        </span>
+        <span class="tape-foot">
+          @if (!loading()) {
+            @if (overdue().length) {
+              <span class="delta is-down">{{ fmtNumber(overdue().length) }} con fecha vencida</span>
+            } @else {
+              {{ winRate() }}% de cierre ganado
+            }
+          }
+        </span>
+      </div>
+    </div>
+
+    <div class="cols cols-main">
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Contratos emitidos · 12 meses</h2>
+            <span class="panel-note num">{{ fmtNumber(contracts().length) }} acumulados</span>
+          </div>
+          <div class="panel-body">
+            @if (loading()) {
+              <div class="chart-skeleton" aria-hidden="true">
+                @for (bar of [1,2,3,4,5,6,7,8,9,10,11,12]; track bar) {
+                  <span class="skel" [style.height.%]="35 + (bar * 47 % 60)"></span>
+                }
+              </div>
+            } @else if (contractGrowth().length) {
+              <app-area-chart [points]="contractGrowth()" valueLabel="Contratos" />
+            } @else {
+              <div class="empty">
+                <app-icon name="reports" [size]="26" />
+                <h4>Todavía no hay contratos emitidos</h4>
+                <p>Cuando se emita el primer contrato aparecerá la curva de colocación.</p>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Colocación por área · 6 meses</h2>
+            <div class="legend">
+              <span class="legend-item">
+                <span class="legend-swatch" style="background: var(--series-1)"></span>Banca
+              </span>
+              <span class="legend-item">
+                <span class="legend-swatch" style="background: var(--series-2)"></span>Seguros
+              </span>
+            </div>
+          </div>
+          <div class="panel-body">
+            @if (loading()) {
+              <div class="chart-skeleton" aria-hidden="true">
+                @for (bar of [1,2,3,4,5,6,7,8,9,10,11,12]; track bar) {
+                  <span class="skel" [style.height.%]="30 + (bar * 31 % 65)"></span>
+                }
+              </div>
+            } @else {
+              <app-bar-chart [data]="contractIntake()" primaryLabel="Banca" secondaryLabel="Seguros" />
+            }
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Embudo por etapa</h2>
+          </div>
+          <div class="panel-body">
+            @if (loading()) {
+              <span class="skel" style="height: 8px; border-radius: 999px"></span>
+              <div class="breakdown">
+                @for (row of [1,2,3,4]; track row) { <span class="skel" style="margin: 9px 0"></span> }
+              </div>
+            } @else if (byStage().length) {
+              <div class="meter" role="img" aria-label="Oportunidades abiertas por etapa">
+                @for (row of byStage(); track row.name) {
+                  <span class="meter-seg" [style.width.%]="row.pct" [style.background]="row.color"></span>
+                }
+              </div>
+              <div class="breakdown">
+                @for (row of byStage(); track row.name) {
+                  <div class="breakdown-row">
+                    <span class="legend-swatch" [style.background]="row.color"></span>
+                    <span class="name">{{ row.name }}</span>
+                    <span class="val">{{ fmtNumber(row.value) }}</span>
+                    <span class="pct">{{ row.pct.toFixed(0) }}%</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="rail-empty">No hay oportunidades abiertas en tu alcance.</p>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Contratos por estado</h2>
+          </div>
+          <div class="panel-body">
+            @if (loading()) {
+              <span class="skel" style="height: 8px; border-radius: 999px"></span>
+              <div class="breakdown">
+                @for (row of [1,2,3]; track row) { <span class="skel" style="margin: 9px 0"></span> }
+              </div>
+            } @else if (byStatus().length) {
+              <div class="meter" role="img" aria-label="Contratos por estado">
+                @for (row of byStatus(); track row.name) {
+                  <span class="meter-seg" [style.width.%]="row.pct" [style.background]="row.color"></span>
+                }
+              </div>
+              <div class="breakdown">
+                @for (row of byStatus(); track row.name) {
+                  <div class="breakdown-row">
+                    <span class="legend-swatch" [style.background]="row.color"></span>
+                    <span class="name">{{ row.name }}</span>
+                    <span class="val">{{ fmtNumber(row.value) }}</span>
+                    <span class="pct">{{ row.pct.toFixed(0) }}%</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="rail-empty">Sin contratos que repartir todavía.</p>
+            }
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Cierres próximos</h2>
+          </div>
+          <div class="panel-body is-flush">
+            @if (loading()) {
+              <div style="padding: 18px; display: grid; gap: 16px">
+                @for (row of [1,2,3,4]; track row) { <span class="skel"></span> }
+              </div>
+            } @else if (closing().length) {
+              <ul class="close-list">
+                @for (o of closing(); track o.oportunityId) {
+                  <li>
+                    <span class="close-id">
+                      <span class="close-client">{{ o.clientName }}</span>
+                      <span class="close-product">{{ o.prdoductName }} · {{ o.stageName }}</span>
+                    </span>
+                    <span class="close-val">
+                      <span class="num">{{ fmtCompact(o.estimatedMont ?? 0) }}</span>
+                      <span class="close-date">{{ fmtDate(o.dateEstimatedClose) }}</span>
+                    </span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="rail-empty" style="padding: 0 18px 18px">
+                Ninguna oportunidad tiene fecha de cierre próxima.
+              </p>
+            }
+          </div>
+          <div class="panel-foot">
+            <span>{{ fmtNumber(openOportunities().length) }} abiertas</span>
+            <a routerLink="/admin/pipeline">Ver embudo</a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Últimos contratos</h2>
+        <a class="panel-link" routerLink="/admin/contracts">
+          Ver todos
+          <app-icon name="chevronRight" [size]="13" />
+        </a>
+      </div>
+      <div class="panel-body is-flush">
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th scope="col">Referencia</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Producto</th>
+                <th scope="col">Área</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Emisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading()) {
+                @for (row of skeletonRows; track row) {
+                  <tr>
+                    <td><span class="skel" style="width: 96px"></span></td>
+                    <td><span class="skel" style="width: 168px"></span></td>
+                    <td><span class="skel" style="width: 128px"></span></td>
+                    <td><span class="skel" style="width: 70px"></span></td>
+                    <td><span class="skel" style="width: 66px"></span></td>
+                    <td><span class="skel" style="width: 76px"></span></td>
+                  </tr>
+                }
+              } @else if (recentContracts().length) {
+                @for (c of recentContracts(); track c.contractId) {
+                  <tr>
+                    <td class="num ref">
+                      @if (canOpenContract(c)) {
+                        <a [routerLink]="contractLink(c)">{{ c.referenceNumber }}</a>
+                      } @else {
+                        <span [title]="'El detalle es del área ' + c.areaName">{{ c.referenceNumber }}</span>
+                      }
+                    </td>
+                    <td class="cell-strong">{{ c.clientName }}</td>
+                    <td class="muted-cell">{{ c.productName }}</td>
+                    <td><span class="chip">{{ c.areaName }}</span></td>
+                    <td><span [class]="statusClass(c.contractStatusName)">{{ c.contractStatusName }}</span></td>
+                    <td class="date-cell">
+                      <span class="num">{{ fmtDate(c.dateOpeningIssue) }}</span>
+                      <span class="cell-sub">{{ fmtAgo(c.dateOpeningIssue) }}</span>
+                    </td>
+                  </tr>
+                }
+              } @else {
+                <tr>
+                  <td colspan="6">
+                    <div class="empty">
+                      <app-icon name="contracts" [size]="26" />
+                      <h4>Sin contratos en tu alcance</h4>
+                      <p>
+                        Aquí aparecerán los contratos conforme se emitan. Si esperabas ver
+                        alguno, confirma con tu administrador que tu rol tenga el área correcta.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+</div>

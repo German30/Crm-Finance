@@ -1,0 +1,208 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Clientes</h1>
+      <p class="lede">
+        Cartera de personas físicas y morales, con el ejecutivo asignado a cada expediente.
+      </p>
+    </div>
+    <div class="actions">
+      <span class="head-total">
+        <span class="head-total-label">Personas morales</span>
+        <span class="num head-total-value">{{ fmtNumber(moralCount()) }}</span>
+      </span>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head filters">
+      <div class="toolbar">
+        <div class="input-affix">
+          <app-icon name="search" />
+          <label class="sr-only" for="client-search">Buscar cliente</label>
+          <input
+            class="input"
+            id="client-search"
+            type="search"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event); onFilterChange()"
+            placeholder="Nombre, RFC, correo o ejecutivo"
+            autocomplete="off"
+          />
+        </div>
+
+        <label class="sr-only" for="client-type">Tipo de persona</label>
+        <select
+          class="select"
+          id="client-type"
+          [ngModel]="typeFilter()"
+          (ngModelChange)="typeFilter.set($event); onFilterChange()"
+        >
+          <option value="">Todos los tipos</option>
+          @for (t of typePersons(); track t.id) {
+            <option [value]="t.name">{{ t.name }}</option>
+          }
+        </select>
+
+        @if (hasFilters()) {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="clearFilters()">
+            <app-icon name="close" [size]="13" />
+            Limpiar
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="panel-body is-flush">
+      @if (errorText()) {
+        <div class="empty">
+          <app-icon name="alert" [size]="26" />
+          <h4>No se pudo cargar la cartera</h4>
+          <p>{{ errorText() }}</p>
+          <button type="button" class="btn btn-secondary" (click)="load()">Reintentar</button>
+        </div>
+      } @else {
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'clientName'"
+                    [attr.aria-sort]="ariaSort('clientName')" (click)="sortBy('clientName')">
+                  Cliente<span class="sort-mark">{{ sortMark('clientName') }}</span>
+                </th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'typePersonName'"
+                    [attr.aria-sort]="ariaSort('typePersonName')" (click)="sortBy('typePersonName')">
+                  Tipo<span class="sort-mark">{{ sortMark('typePersonName') }}</span>
+                </th>
+                <th scope="col">Contacto</th>
+                <th scope="col" class="is-sortable" [class.is-active]="sortKey() === 'assignedUserName'"
+                    [attr.aria-sort]="ariaSort('assignedUserName')" (click)="sortBy('assignedUserName')">
+                  Ejecutivo<span class="sort-mark">{{ sortMark('assignedUserName') }}</span>
+                </th>
+                <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading()) {
+                @for (row of skeletonRows; track row) {
+                  <tr>
+                    <td><span class="skel" style="width: 190px"></span></td>
+                    <td><span class="skel" style="width: 84px"></span></td>
+                    <td><span class="skel" style="width: 170px"></span></td>
+                    <td><span class="skel" style="width: 120px"></span></td>
+                    <td></td>
+                  </tr>
+                }
+              } @else if (pageRows().length) {
+                @for (c of pageRows(); track c.clinetId) {
+                  <tr>
+                    <td>
+                      <a class="client-cell" [routerLink]="detailLink(c)">
+                        <span class="avatar">
+                          <app-icon [name]="isMoral(c) ? 'building' : 'person'" [size]="14" />
+                        </span>
+                        <span>
+                          <span class="cell-strong">{{ c.clientName }}</span>
+                          <span class="cell-sub num">{{ c.fiscalId || 'Sin RFC' }}</span>
+                        </span>
+                      </a>
+                    </td>
+                    <td><span class="chip">{{ c.typePersonName }}</span></td>
+                    <td class="contact">
+                      <span class="contact-mail">{{ c.email || '—' }}</span>
+                      <span class="cell-sub num">{{ c.phone || 'Sin teléfono' }}</span>
+                    </td>
+                    <td class="muted-cell">{{ c.assignedUserName || 'Sin asignar' }}</td>
+                    <td class="col-actions">
+                      <span class="row-actions">
+                        <a
+                          class="btn btn-ghost btn-sm btn-icon"
+                          [routerLink]="detailLink(c)"
+                          [attr.aria-label]="'Abrir expediente de ' + c.clientName"
+                        >
+                          <app-icon name="chevronRight" [size]="14" />
+                        </a>
+                        @if (access.canDelete()) {
+                          <button
+                            type="button"
+                            class="btn btn-ghost btn-sm btn-icon"
+                            (click)="askDelete(c)"
+                            [disabled]="deletingId() === c.clinetId"
+                            [attr.aria-label]="'Eliminar a ' + c.clientName"
+                            title="Eliminar cliente"
+                          >
+                            @if (deletingId() === c.clinetId) {
+                              <span class="btn-spin" aria-hidden="true"></span>
+                            } @else {
+                              <app-icon name="trash" [size]="14" />
+                            }
+                          </button>
+                        }
+                      </span>
+                    </td>
+                  </tr>
+                }
+              } @else if (hasFilters()) {
+                <tr>
+                  <td colspan="5">
+                    <div class="empty">
+                      <app-icon name="search" [size]="26" />
+                      <h4>Ningún cliente coincide con estos filtros</h4>
+                      <p>Prueba con otro término, o quita el filtro de tipo de persona.</p>
+                      <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+                        Quitar filtros
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                <tr>
+                  <td colspan="5">
+                    <div class="empty">
+                      <app-icon name="clients" [size]="26" />
+                      <h4>Todavía no hay clientes en la cartera</h4>
+                      <p>
+                        Los expedientes se dan de alta desde el servicio de clientes. En cuanto
+                        exista el primero, aparecerá aquí con su ejecutivo asignado.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    @if (!loading() && !errorText() && totalPages() > 1) {
+      <div class="panel-foot">
+        <span class="pager-info">{{ rangeLabel() }}</span>
+        <div class="pager">
+          <button type="button" class="pager-btn" [disabled]="currentPage() === 1"
+                  (click)="page.set(currentPage() - 1)" aria-label="Página anterior">
+            <app-icon name="chevronLeft" [size]="13" />
+          </button>
+          @for (n of pageNumbers(); track n) {
+            <button type="button" class="pager-btn" [class.is-active]="n === currentPage()"
+                    (click)="page.set(n)" [attr.aria-current]="n === currentPage() ? 'page' : null">{{ n }}</button>
+          }
+          <button type="button" class="pager-btn" [disabled]="currentPage() === totalPages()"
+                  (click)="page.set(currentPage() + 1)" aria-label="Página siguiente">
+            <app-icon name="chevronRight" [size]="13" />
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+</div>
+
+<app-confirm-dialog
+  title="Eliminar cliente"
+  [message]="dialogMessage()"
+  confirmLabel="Eliminar"
+  cancelLabel="Cancelar"
+  [danger]="true"
+  (confirmed)="onConfirmDelete()"
+  (cancelled)="pending.set(null)"
+/>

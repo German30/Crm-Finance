@@ -1,12 +1,19 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService } from './core/services/theme.service';
+import { ToastHost } from './shared/ui/toast-host';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  standalone: true,
+  imports: [RouterOutlet, ToastHost],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <router-outlet />
+    <app-toast-host />
+  `,
 })
 export class App {
-  protected readonly title = signal('crm-frontend');
+  // Instantiated here so the stored theme choice is applied for every route.
+  private readonly theme = inject(ThemeService);
 }
