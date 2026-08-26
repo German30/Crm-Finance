@@ -22,7 +22,6 @@ database/
 # Documentacion y control de versiones
 .git/
 .gitignore
-CLAUDE.md
 README.md
 *.md
 
