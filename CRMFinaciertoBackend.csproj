@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <!--
+      Debe seguir la misma linea que la que arrastra JwtBearer 8.0.0 (System.IdentityModel.Tokens.Jwt
+      y Microsoft.IdentityModel.JsonWebTokens 7.0.3). Con "8.*" se resolvia 8.19.1 y el token se
+      emitia con los tipos 7.x pero se validaba con los 8.x, devolviendo siempre 401 invalid_token.
+    -->
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.0.3" />
+    <!--
+      Proveedor activo. Arrastra Microsoft.EntityFrameworkCore.Relational, asi que no
+      hace falta referenciar EF Core por separado.
+    -->
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+</Project>

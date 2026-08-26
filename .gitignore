@@ -1,0 +1,16 @@
+# Compilacion
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Secretos: .env lleva las contrasenas de SQL Server y la clave de firma JWT.
+# .env.example si se versiona, con valores de ejemplo.
+.env
+.env.*
+!.env.example

@@ -1,0 +1,32 @@
+# Artefactos de compilacion: si se copian, el build del contenedor los reutiliza y
+# produce imagenes corruptas o innecesariamente grandes.
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Entorno de desarrollo
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# No entran en la imagen de la API: los scripts los monta el servicio db-init como
+# volumen, y los secretos se pasan por variables de entorno.
+database/
+.env
+.env.*
+!.env.example
+
+# Documentacion y control de versiones
+.git/
+.gitignore
+CLAUDE.md
+README.md
+*.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml

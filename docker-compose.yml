@@ -1,0 +1,103 @@
+# =============================================================================
+# CRMFinacierto — stack completo
+#
+#   docker compose up -d --build
+#
+# DOS servicios, cada uno con su puerto, y los dos corriendo:
+#
+#   crm-api    Up (healthy)   ->  http://localhost:5170   (Swagger en /swagger)
+#   crm-mysql  Up (healthy)   ->  localhost:3307          (usuario root, clave en .env)
+#
+# Los puertos se cambian desde el .env con API_PORT y MYSQL_PORT.
+#
+# El stack trae su propio MySQL, asi que no toca el que tengas instalado en la
+# maquina (que ocupa el 3306 y el 33060).
+#
+# La base se crea e inicializa sola: los scripts montados en
+# /docker-entrypoint-initdb.d los ejecuta la propia imagen de MySQL la primera vez
+# que arranca con el volumen vacio. Antes esto lo hacia un tercer contenedor
+# "db-init" que terminaba en "Exited (0)": funcionaba, pero se veia como un
+# contenedor caido y no tenia puerto propio.
+#
+# OJO: initdb.d solo corre con el directorio de datos VACIO. Si cambias los scripts
+# de esquema, hay que recrear el volumen:  docker compose down -v && docker compose up -d
+# =============================================================================
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: crm-mysql
+    command:
+      # utf8mb4 en el servidor. Los scripts ademas hacen SET NAMES utf8mb4, que es lo
+      # que de verdad blinda la carga: asi no depende de como se invoque el cliente.
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # Crea el usuario de la aplicacion, pero SIN permisos: la imagen solo concede
+      # cuando ademas se define MYSQL_DATABASE. Se los da 02_permisos_app.sh, y solo
+      # sobre datos.
+      MYSQL_USER: ${CRM_APP_USER}
+      MYSQL_PASSWORD: ${CRM_APP_PASSWORD}
+      # MYSQL_DATABASE no se declara a proposito: la base la crea 00_schema.sql, que
+      # es quien fija su juego de caracteres. Una sola fuente de verdad.
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - crm-mysqldata:/var/lib/mysql
+      # Inicializacion. Se ejecutan en orden alfabetico y solo en el primer arranque.
+      # Van montados fichero a fichero para que quede a la vista que entra y en que
+      # orden; si anades un script nuevo, anade tambien su linea aqui.
+      - ./database/mysql/00_schema.sql:/docker-entrypoint-initdb.d/00_schema.sql:ro
+      - ./database/mysql/00_seed.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
+      - ./docker/mysql/02_permisos_app.sh:/docker-entrypoint-initdb.d/02_permisos_app.sh:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      # Generoso: en el primer arranque MySQL inicializa el directorio de datos y
+      # ejecuta los scripts antes de aceptar conexiones.
+      start_period: 60s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Development para tener Swagger. Para produccion: Production + un proxy que
+      # termine el TLS (el flag Hosting__UseHttpsRedirection ya viene en el Dockerfile).
+      ASPNETCORE_ENVIRONMENT: Development
+
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=crm_finance;User Id=${CRM_APP_USER};Password=${CRM_APP_PASSWORD};"
+
+      # Declarada y no autodetectada: ServerVersion.AutoDetect abriria una conexion
+      # durante el arranque y la API no levantaria si MySQL aun no responde.
+      Database__MySqlVersion: "8.4.0-mysql"
+
+      JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+      JwtSettings__Issuer: ${JWT_ISSUER:-http://localhost:5170}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-http://localhost:4200}
+
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
+    ports:
+      - "${API_PORT:-5170}:8080"
+    healthcheck:
+      # El sondeo vive en docker/healthcheck.sh, copiado a /usr/local/bin/healthcheck
+      # por el Dockerfile. Va en un script y no en linea porque la peticion HTTP
+      # necesita CRLF literales, y escaparlos dentro del YAML es una fuente de errores.
+      test: ["CMD", "healthcheck"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  crm-mysqldata:
